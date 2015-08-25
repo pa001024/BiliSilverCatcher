@@ -1,4 +1,6 @@
-// BiliSilverCatcher ver.1.1.1
+// BiliSilverCatcher ver.1.1.2
+// TODO: 加入相应localStorage功能
+// TODO: 改进识别算法
 if (window._bsc && window._bsc.listener) window._bsc.listener.clear();
 
 var /*<class>*/ BiliSilverCatcher = function(autoMode,debug) {
@@ -54,7 +56,9 @@ BiliSilverCatcher.prototype.setListener = function() {
 		$(".treasure-box").click();
 		$("#freeSilverCaptchaInput").focus();
 	};
+	console.log("BiliSilverCatcher ver.1.1.2");
 	console.log("瓜子掉下去了!~接下来会上来金的还是银的呢~");
+	var retryCooldownFlag = 0;
 	var Listener = function() {
 		// 跨日处理
 		if (_this.endDay)
@@ -63,6 +67,7 @@ BiliSilverCatcher.prototype.setListener = function() {
 			_this.currentTask = null;
 			var msg = new Notification("大丰收~", {body: "今天的"+_this.getTotalSilver()+"瓜子已全部领完~",icon:"//static.hdslb.com/live-static/images/7.png"});
 			_this.endDay = ~~(new Date()).format("D");
+			setTimeout(function(){msg.close();}, 1e4);
 			return;
 		}
 		// 验证码处理
@@ -71,6 +76,7 @@ BiliSilverCatcher.prototype.setListener = function() {
 			_this.loadImage(img);
 			$("#freeSilverCaptchaInput").val(_this.getAnwser(_this.getQuestion()));
 			$("#getFreeSilverAward").click();
+			setTimeout(function(){retryCooldownFlag = 0}, 2e3);
 		}: null;
 		if (_this.currentTask) {
 			var success = $(".tip-primary").filter(function(){if($(this).text()=="我知道了")return !0});
@@ -78,12 +84,15 @@ BiliSilverCatcher.prototype.setListener = function() {
 				var msg = new Notification(_this.currentTask.silver+"瓜子自动领取成功", {body: "今日已领取"+_this.getTotalSilver()+"瓜子",icon:"//static.hdslb.com/live-static/images/7.png"});
 				success.click();
 				_this.currentTask = null;
-				setTimeout(function(){msg.close();}, 5000);
+				setTimeout(function(){msg.close();}, 5e3);
 			} else {
-				if (_this.currentTask.retryTimes > 5) {
+				if (_this.currentTask.retryTimes > 10) {
 					var msg = new Notification(_this.currentTask.silver+"瓜子自动领取失败", {body: "点击手动领取",icon:"//static.hdslb.com/live-static/images/1.png"});
 					msg.onclick = focusBox;
+					setTimeout(function(){msg.close();}, 5e3);
 				} else {
+					if (retryCooldownFlag) return;
+					retryCooldownFlag = 1;
 					$(".treasure-box").click();
 					++_this.currentTask.retryTimes;
 				}
@@ -102,7 +111,7 @@ BiliSilverCatcher.prototype.setListener = function() {
 			msg.onclick = focusBox;
 		};
 	};
-	Listener.interval = setInterval(Listener,1000);
+	Listener.interval = setInterval(Listener, 1e3);
 	Listener.clear = function(){clearInterval(Listener.interval);};
 	_this.listener = Listener;
 };
