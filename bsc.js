@@ -1,4 +1,4 @@
-// BiliSilverCatcher ver.1.1.0
+// BiliSilverCatcher ver.1.1.1
 if (window._bsc && window._bsc.listener) window._bsc.listener.clear();
 
 var /*<class>*/ BiliSilverCatcher = function(autoMode,debug) {
@@ -24,7 +24,7 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode,debug) {
 	this.tasks = [];
 	this.endDay = null;
 	if (!window.OCRAD) 
-		$(document.body).append($("<script>").attr("src","http://antimatter15.com/ocrad.js/ocrad.js"));
+		$(document.body).append($("<script>").attr("src","http://pa001024.github.io/BiliSilverCatcher/ocrad.js"));
 };
 BiliSilverCatcher.prototype.getTotalSilver = function() {
 	var t = 0;
@@ -72,9 +72,9 @@ BiliSilverCatcher.prototype.setListener = function() {
 			$("#freeSilverCaptchaInput").val(_this.getAnwser(_this.getQuestion()));
 			$("#getFreeSilverAward").click();
 		}: null;
-		if (_this.currentTask && $(".treasure-count-down").text() != "00:00") {
+		if (_this.currentTask) {
 			var success = $(".tip-primary").filter(function(){if($(this).text()=="我知道了")return !0});
-			if (success.length) {
+			if (success.length && $(".treasure-count-down").text() != "00:00") {
 				var msg = new Notification(_this.currentTask.silver+"瓜子自动领取成功", {body: "今日已领取"+_this.getTotalSilver()+"瓜子",icon:"//static.hdslb.com/live-static/images/7.png"});
 				success.click();
 				_this.currentTask = null;
@@ -91,7 +91,7 @@ BiliSilverCatcher.prototype.setListener = function() {
 		}
 		// 检测当前task
 		if (!_this.currentTask && $(".treasure-count-down").text() == "00:00") {
-			_this.tasks.push(_this.currentTask = {silver: ~~$("#gz-num").text(), retryTimes: 5});
+			_this.tasks.push(_this.currentTask = {silver: ~~$("#gz-num").text(), retryTimes: 0});
 			var msg = new Notification(_this.currentTask.silver+"瓜子已就绪", {body: "点击转到页面"+(_this.autoMode?"（2秒后自动领取）":""),icon:"//static.hdslb.com/live-static/images/1.png"});
 			if(_this.autoMode) {
 				setTimeout(function(){
