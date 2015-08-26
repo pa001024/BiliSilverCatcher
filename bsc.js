@@ -34,7 +34,7 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 	this.signs = {}; // [date].1/0
 	this.version = "1.1.4";
 	if (!window.OCRAD)
-		$(document.body).append($("<script>").attr("src", "http://pa001024.github.io/BiliSilverCatcher/ocrad.js"));
+		(function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://pa001024.github.io/BiliSilverCatcher/ocrad.js');
 };
 BiliSilverCatcher.prototype.saveDailyTasks = function() {
 	if (typeof localStorage != "undefined") {

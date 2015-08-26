@@ -1,10 +1,113 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>作死</title>
+	<link rel="stylesheet" href="http://cdn.staticfile.org/twitter-bootstrap/3.3.1/css/bootstrap.css">
+	<style>
+.bs-docs-header, .bs-docs-masthead {
+	position: relative;
+	padding: 30px 0;
+	color: #BFD8E3;
+	text-align: center;
+	text-shadow: 0 1px 0 rgba(0,0,0,.1);
+	background-color: #7178C2;
+	background-image: -webkit-gradient(linear,left top,left bottom,from(#7178C2),to(#6F94BE));
+	background-image: -webkit-linear-gradient(top,#7178C2 0,#6F94BE 100%);
+	background-image: -o-linear-gradient(top,#7178C2 0,#6F94BE 100%);
+	background-image: linear-gradient(to bottom,#7178C2 0,#6F94BE 100%);
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#7178C2', endColorstr='#6F94BE', GradientType=0);
+	background-repeat: repeat-x;
+}
+.bs-docs-header {
+	margin-bottom: 40px;
+	font-size: 20px
+}
+
+.bs-docs-header h1 {
+	margin-top: 0;
+	color: #fff
+}
+
+.bs-docs-header p {
+	margin-bottom: 0;
+	font-weight: 300;
+	line-height: 1.4
+}
+
+.bs-docs-header .container {
+	position: relative
+}
+
+@media (min-width: 768px) {
+	.bs-docs-header {
+		padding-top:60px;
+		padding-bottom: 60px;
+		font-size: 24px;
+		text-align: left
+	}
+
+	.bs-docs-header h1 {
+		font-size: 60px;
+		line-height: 1
+	}
+}
+
+@media (min-width: 992px) {
+	.bs-docs-header h1,.bs-docs-header p {
+		margin-right:380px
+	}
+}
+.bookmark-drop-btn{
+	background: url(./img/1.png) no-repeat 0 0;
+	cursor: move;
+	display: block;
+	height: 56px;
+	width: 290px;
+	margin: 25px 0 0;
+}
+.bookmark-drop-btn span{
+	display: none;
+}
+
+</style>
 </head>
 <body>
-	<a href="javascript:void $(document.body).append($('<script>').attr('src','http://pa001024.github.io/BiliSilverCatcher/bsc.js'))">拖动到书签栏</a>
+	<header class="navbar navbar-static-top bs-docs-nav">
+		<div class="container">
+			<div class="navbar-header">
+				<a href="http://live.bilibili.com/" class="navbar-brand"><img src="http://i0.hdslb.com/u_user/live/v3/images/bilibili_live_logo.png" alt="bilibili live"></a>
+			</div>
+		</div>
+	</header>
+	<div class="bs-docs-header" id="content" tabindex="-1">
+	  <div class="container">
+		<h1>Bilibili 直播瓜子の日常</h1>
+		<p>解放双手，不抠鼻屎。</p>
+	  </div>
+	</div>
+	<div class="container">
+		<div class="row">
+			<div class="col-md-9" role="main">
+				<h1 class="page-header">使用方法</h1>
+				<p>只要将下面图片拖动到浏览器的书签栏</p>
+				<p>再在任意直播房间页面点击书签即可</p>
+				<p>注：请不要在多个页面同时使用（并不能加快瓜子领取）</p>
+				<a href="javascript:void (function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://pa001024.github.io/BiliSilverCatcher/bsc.js')" class="bookmark-drop-btn" alt="拖动我到书签栏">
+					<span>❤领瓜子</span>
+				</a>
+				<h1 class="page-header">贡献代码</h1>
+				<p><iframe src="https://ghbtns.com/github-btn.html?user=pa001024&repo=BiliSilverCatcher&type=star&count=true&size=large" frameborder="0" scrolling="0" width="160px" height="30px"></iframe>
+				<iframe src="https://ghbtns.com/github-btn.html?user=pa001024&repo=BiliSilverCatcher&type=fork&count=true&size=large" frameborder="0" scrolling="0" width="158px" height="30px"></iframe></p>
+				<a href="https://github.com/pa001024/BiliSilverCatcher" class="btn btn-primary">View on GitHub</a>
+			</div>
+			<div class="col-md-3">
+				<img src="./img/2.png" alt="说明">
+			</div>
+		</div>
+	</div>
+	<script src="http://cdn.staticfile.org/twitter-bootstrap/3.3.1/js/bootstrap.min.js"></script>
 </body>
 </html>
