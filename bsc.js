@@ -1,7 +1,7 @@
-// BiliSilverCatcher ver 1.1.3
-// TODO: 加入相应localStorage功能
+// BiliSilverCatcher ver 1.1.4
 // TODO: 改进识别算法
-// features: 自动签到, 自动领瓜子
+// TODO: 浏览器兼容性
+// features: 自动签到, 自动领瓜子, localStorage记录当日瓜子
 if (window._bsc && window._bsc.listener) window._bsc.listener.clear();
 
 var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
@@ -25,11 +25,25 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 	this.autoMode = false || autoMode;
 	this.currentTask = null; // {date,silver,retryTimes}
 	this.tasks = [];
+	if (typeof localStorage != "undefined" && localStorage["bscDailyTasks"]) {
+		var dt = JSON.parse(localStorage["bscDailyTasks"]);
+		if (dt.date == this.getDate())
+			this.tasks = dt.tasks;
+	}
 	this.endDay = null;
 	this.signs = {}; // [date].1/0
-	this.version = "1.1.3";
+	this.version = "1.1.4";
 	if (!window.OCRAD)
 		$(document.body).append($("<script>").attr("src", "http://pa001024.github.io/BiliSilverCatcher/ocrad.js"));
+};
+BiliSilverCatcher.prototype.saveDailyTasks = function() {
+	if (typeof localStorage != "undefined") {
+		var d = this.getDate(), dt = { date: d, tasks: [] };
+		for (var i = 0; i < this.tasks.length; i++)
+			if (this.tasks[i].date == d)
+				dt.tasks.push(this.tasks[i]);
+		localStorage["bscDailyTasks"] = JSON.stringify(dt);
+	}
 };
 BiliSilverCatcher.prototype.getDate = function() {
 	// TODO: 处理不同时区
@@ -102,7 +116,7 @@ BiliSilverCatcher.prototype.setListener = function() {
 		if (!$(".treasure").length || $(".treasure").css("display") == "none") {
 			_this.currentTask = null;
 			var msg = new Notification("大丰收~", {
-				body: "今天的" + _this.getTotalSilver() + "瓜子已全部领完~",
+				body: "今天的" + _this.getDailyTotalSilver() + "瓜子已全部领完~",
 				icon: "//static.hdslb.com/live-static/images/7.png"
 			});
 			_this.endDay = ~~(new Date()).format("D");
@@ -121,11 +135,12 @@ BiliSilverCatcher.prototype.setListener = function() {
 			var success = $(".tip-primary").filter(function() { if ($(this).text() == "我知道了") return !0 });
 			if (success.length && $(".treasure-count-down").text() != "00:00") {
 				var msg = new Notification(_this.currentTask.silver + "瓜子自动领取成功", {
-					body: "今日已领取" + _this.getTotalSilver() + "瓜子",
+					body: "今日已领取" + _this.getDailyTotalSilver() + "瓜子",
 					icon: "//static.hdslb.com/live-static/images/7.png"
 				});
 				success.click();
 				_this.currentTask = null;
+				_this.saveDailyTasks();
 				setTimeout(function() { msg.close() }, 5e3);
 			} else {
 				if (_this.currentTask.retryTimes > 10) {
