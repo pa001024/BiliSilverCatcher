@@ -1,10 +1,11 @@
-// BiliSilverCatcher ver 1.1.4
+// BiliSilverCatcher ver 1.1.5
 // TODO: 改进识别算法
 // TODO: 浏览器兼容性
-// features: 自动签到, 自动领瓜子, localStorage记录当日瓜子
+// features: 自动签到, 自动领瓜子(跨天,支持不同时区), localStorage记录当日瓜子
 if (window._bsc && window._bsc.listener) window._bsc.listener.clear();
 
 var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
+	this.version = "1.1.5";
 	var canvas = document.getElementById('bcsCanvas');
 	if (!canvas) {
 		canvas = document.createElement('canvas');
@@ -25,73 +26,89 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 	this.autoMode = false || autoMode;
 	this.currentTask = null; // {date,silver,retryTimes}
 	this.tasks = [];
+	this.endDay = null;
+	this.debug = debug;
 	if (typeof localStorage != "undefined" && localStorage["bscDailyTasks"]) {
 		var dt = JSON.parse(localStorage["bscDailyTasks"]);
 		if (dt.date == this.getDate())
 			this.tasks = dt.tasks;
+		if (this.tasks.length) {
+			this.endDay = dt.endDay;
+		}
 	}
-	this.endDay = null;
 	this.signs = {}; // [date].1/0
-	this.version = "1.1.4";
 	if (!window.OCRAD)
 		(function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://pa001024.github.io/BiliSilverCatcher/ocrad.js');
 };
-BiliSilverCatcher.prototype.saveDailyTasks = function() {
+BiliSilverCatcher.prototype = {
+debugLog: function(d) {
+	if (this.debug) console.log(d)
+},
+saveDailyTasks: function() {
 	if (typeof localStorage != "undefined") {
-		var d = this.getDate(), dt = { date: d, tasks: [] };
+		var d = this.getDate(), dt = { date: d, tasks: [], endDay: this.endDay};
 		for (var i = 0; i < this.tasks.length; i++)
 			if (this.tasks[i].date == d)
 				dt.tasks.push(this.tasks[i]);
 		localStorage["bscDailyTasks"] = JSON.stringify(dt);
 	}
-};
-BiliSilverCatcher.prototype.getDate = function() {
-	// TODO: 处理不同时区
-	return (new Date()).format("YYMMDD");
-};
-BiliSilverCatcher.prototype.getTotalSilver = function() {
+},
+getDate: function() {
+	var d = new Date();
+	d.setTime(d.getTime() + d.getTimezoneOffset() * 6e4 + 144e5); // GMT+4
+	return d.format("YYMMDD");
+},
+getTotalSilver: function() {
 	var t = 0;
 	for (var i = 0; i < this.tasks.length; i++)
 		t += this.tasks[i].silver;
 	return t;
-};
-BiliSilverCatcher.prototype.getDailyTotalSilver = function() {
+},
+getDailyTotalSilver: function() {
 	var t = 0, d = this.getDate();
 	for (var i = 0; i < this.tasks.length; i++)
 		if (this.tasks[i].date == d)
 			t += this.tasks[i].silver;
 	return t;
-};
-BiliSilverCatcher.prototype.loadImage = function(img) {
+},
+loadImage: function(img) {
 	this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 	this.context.drawImage(img, 0, 0);
 	this.img = img;
-};
-BiliSilverCatcher.prototype.getQuestion = function() {
-	return OCRAD(_bsc.context.getImageData(0, 0, 120, 40)).replace(/[Zz]/g, "2").replace(/[Oo]/g, "0").replace(/g/g, "9").replace(/[lI]/g, "1").replace(/[Ss]/g, "5").replace(/_/g, "4").replace(/B/g, "8").replace(/b/g, "6");
-};
-BiliSilverCatcher.prototype.getAnwser = function(question) {
+},
+getQuestion: function() {
+	var q = OCRAD(_bsc.context.getImageData(0, 0, 120, 40));
+	q = q.replace(/[Zz]/g, "2").replace(/[Oo]/g, "0").replace(/g/g, "9").replace(/[lI]/g, "1").replace(/[Ss]/g, "5").replace(/_/g, "4").replace(/B/g, "8").replace(/b/g, "6");
+	this.debugLog(q);
+	return q;
+},
+getAnwser: function(question) {
 	if (question.endsWith("-") || question.endsWith("+")) {
 		question = question.substring(0, question.length - 1);
 	}
 	return eval(question);
-};
-BiliSilverCatcher.prototype.doSign = function(callback) {
+},
+doSign: function(callback) {
 	var _this = this;
 	if (_this.signs[_this.getDate()]) return;
 	$.get("/sign/doSign", function(d) {
 		var e = JSON.parse(d);
-		if (e.code == 200) {
-			console.log("自动签到成功");
+		_this.debugLog("自动签到");
+		_this.debugLog(e);
+		if (e.code == 0) {
+			var msg = new Notification("自动签到成功", {
+				body: "获得" + e.data.silver + "瓜子~",
+				icon: "//static.hdslb.com/live-static/images/7.png"
+			});
+			setTimeout(function() { msg.close() }, 5e3);
 			_this.signs[_this.getDate()] = 1;
 			callback && callback();
 		} else if (e.code == -500) {
 			_this.signs[_this.getDate()] = 1;
 		}
 	});
-};
-
-BiliSilverCatcher.prototype.setListener = function() {
+},
+setListener: function() {
 	var _this = this;
 	var focusBox = function() {
 		$(".treasure-box").click();
@@ -106,20 +123,20 @@ BiliSilverCatcher.prototype.setListener = function() {
 		if (!signCooldownFlag) {
 			signCooldownFlag = 1;
 			_this.doSign();
-			setTimeout(function() { signCooldownFlag = 0 }, 3e6); // 5min
+			setTimeout(function() { signCooldownFlag = 0 }, 3e5); // 5min
 		}
-
 		// 跨日处理
 		if (_this.endDay)
-			if (_this.endDay == ~~(new Date()).format("D")) return;
+			if (_this.endDay == _this.getDate()) return;
 			else $(".treasure").show();
 		if (!$(".treasure").length || $(".treasure").css("display") == "none") {
 			_this.currentTask = null;
+			_this.endDay = _this.getDate();
+			if (!_this.getDailyTotalSilver()) return;
 			var msg = new Notification("大丰收~", {
 				body: "今天的" + _this.getDailyTotalSilver() + "瓜子已全部领完~",
 				icon: "//static.hdslb.com/live-static/images/7.png"
 			});
-			_this.endDay = ~~(new Date()).format("D");
 			setTimeout(function() { msg.close() }, 1e4);
 			return;
 		}
@@ -134,6 +151,7 @@ BiliSilverCatcher.prototype.setListener = function() {
 		if (_this.currentTask) {
 			var success = $(".tip-primary").filter(function() { if ($(this).text() == "我知道了") return !0 });
 			if (success.length && $(".treasure-count-down").text() != "00:00") {
+				_this.debugLog((new Date()).format("[YYMMDD HH:mm:ss]") + " 成功领取" + _this.currentTask.silver + "瓜子");
 				var msg = new Notification(_this.currentTask.silver + "瓜子自动领取成功", {
 					body: "今日已领取" + _this.getDailyTotalSilver() + "瓜子",
 					icon: "//static.hdslb.com/live-static/images/7.png"
@@ -177,6 +195,7 @@ BiliSilverCatcher.prototype.setListener = function() {
 	Listener.interval = setInterval(Listener, 1e3);
 	Listener.clear = function() { clearInterval(Listener.interval) };
 	_this.listener = Listener;
+}
 };
 Notification.requestPermission();
 var _bsc = window._bsc = new BiliSilverCatcher(true, typeof __commandLineAPI == "object");
