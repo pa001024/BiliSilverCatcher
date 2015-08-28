@@ -1,11 +1,10 @@
-// BiliSilverCatcher ver 1.1.5
+// BiliSilverCatcher ver 1.1.6
 // TODO: 改进识别算法
 // TODO: 浏览器兼容性
-// features: 自动签到, 自动领瓜子(跨天,支持不同时区), localStorage记录当日瓜子
-if (window._bsc && window._bsc.listener) window._bsc.listener.clear();
+// features: 自动签到, 自动领瓜子(跨天,支持不同时区), localStorage记录当日瓜子和历史瓜子
 
 var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
-	this.version = "1.1.5";
+	this.version = "1.1.6";
 	var canvas = document.getElementById('bcsCanvas');
 	if (!canvas) {
 		canvas = document.createElement('canvas');
@@ -23,52 +22,150 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 	context.textBaseline = 'top';
 	this.context = context;
 	this.canvas = canvas;
-	this.autoMode = false || autoMode;
-	this.currentTask = null; // {date,silver,retryTimes}
-	this.tasks = [];
-	this.endDay = null;
+	this.autoMode = autoMode || false;
+	this.currentTask = null; // {time,silver,retryTimes}
+	this.dailyTasks = { date: this.getDate(), state: 0, tasks: [] }; // {date,state,tasks:[{time,silver,retryTimes}]}
+	this.dailyHistory = []; // [{date,state,silver,tasksCount}] state:1=finished 0=unfinished
+	this.moreTotalSilver = 0;
 	this.debug = debug;
-	if (typeof localStorage != "undefined" && localStorage["bscDailyTasks"]) {
-		var dt = JSON.parse(localStorage["bscDailyTasks"]);
-		if (dt.date == this.getDate())
-			this.tasks = dt.tasks;
-		if (this.tasks.length) {
-			this.endDay = dt.endDay;
-		}
-	}
 	this.signs = {}; // [date].1/0
+	this.load();
 	if (!window.OCRAD)
 		(function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://pa001024.github.io/BiliSilverCatcher/ocrad.js');
+	if (!window.basad) {
+		window.basad = 1;
+		$("<a target='bsc' style='float:left;margin-right:12px' href='/24544'><img src='//pa001024.github.io/BiliSilverCatcher/img/3.png'></a>").insertBefore($(".receive>:first"))
+	}
 };
 BiliSilverCatcher.prototype = {
-debugLog: function(d) {
-	if (this.debug) console.log(d)
+showStatus: function() {
+	console.log("==== BiliSilverCatcher Status ====");
+	console.log("今日已领取: " + this.getDailyTotalSilver() + "瓜子");
+	console.log("累计总领取: " + this.getTotalSilver() + "瓜子");
 },
-saveDailyTasks: function() {
-	if (typeof localStorage != "undefined") {
-		var d = this.getDate(), dt = { date: d, tasks: [], endDay: this.endDay};
-		for (var i = 0; i < this.tasks.length; i++)
-			if (this.tasks[i].date == d)
-				dt.tasks.push(this.tasks[i]);
-		localStorage["bscDailyTasks"] = JSON.stringify(dt);
+debugLog: function(d) {
+	if (this.debug) console.log((new Date()).format("[YY-MM-DD HH:mm:ss]"), d);
+},
+load: function() {
+	if (typeof localStorage == "undefined") return;
+	if (localStorage["bscData"]) {
+		var data = JSON.parse(localStorage["bscData"]); // {lastDayTasks:{date,state,tasks:[{silver}]},moreTotalSilver,dailyHistory:[{date,state,silver,tasksCount}]}
+		this.dailyTasks = data.lastDayTasks;
+		this.moreTotalSilver = data.moreTotalSilver;
+		this.dailyHistory = data.dailyHistory;
 	}
+	this.refreshTask();
+},
+save: function() {
+	if (typeof localStorage == "undefined") return;
+	var data = {
+		lastDayTasks: this.dailyTasks,
+		moreTotalSilver: this.moreTotalSilver,
+		dailyHistory: this.dailyHistory,
+	};
+	localStorage["bscData"] = JSON.stringify(data);
+},
+refreshTask: function() {
+	// 处理跨日转存
+	var today = this.getDate();
+	if (this.dailyTasks.date != today) {
+		if (this.dailyHistory.length > 6) {
+			this.moreTotalSilver += this.dailyHistory.shift().silver;
+		}
+		this.dailyHistory.push({
+			date: this.dailyTasks.date,
+			state: this.dailyTasks.state,
+			silver: this.getDailyTotalSilver(),
+			tasksCount: this.dailyTasks.tasks.length
+		});
+		this.dailyTasks.date = today;
+		this.dailyTasks.state = 0;
+		this.dailyTasks.tasks = [];
+		this.save();
+		return true;
+	}
+	return false;
+},
+startTask: function() {
+	this.dailyTasks.tasks.push(this.currentTask = { time: this.getTime(), silver: ~~$("#gz-num").text(), retryTimes: 0 });
+	var msg = new Notification(this.currentTask.silver + "瓜子已就绪", {
+		body: "点击转到页面" + (this.autoMode ? "（2秒后自动领取）" : ""),
+		icon: "//static.hdslb.com/live-static/images/1.png"
+	});
+	if (this.autoMode) {
+		setTimeout(function() {
+			msg.close();
+			$(".treasure-box").click();
+		}, 2000);
+	}
+	msg.onclick = function() {
+		$(".treasure-box").click();
+		$("#freeSilverCaptchaInput").focus();
+	};
+},
+finishTask: function() {
+	this.debugLog("成功领取" + this.currentTask.silver + "瓜子");
+	var msg = new Notification(this.currentTask.silver + "瓜子自动领取成功", {
+		body: "今日已领取" + this.getDailyTotalSilver() + "瓜子",
+		icon: "//static.hdslb.com/live-static/images/7.png"
+	});
+	this.currentTask = null;
+	setTimeout(function() { msg.close() }, 5e3);
+	this.refreshTask() || this.save();
+},
+startDailyTask: function() {
+	this.debugLog("开始新一轮瓜子收集");
+	$(".treasure").show(); // TODO: 处理不存在.treasure的情况
+	if (!this.getDailyTotalSilver()) return;
+	var msg = new Notification("新的一天开始了", {
+		body: "今天的瓜子也一定会大丰收的~",
+		icon: "//static.hdslb.com/live-static/images/1.png"
+	});
+	setTimeout(function() { msg.close() }, 5e3);
+	this.refreshTask();
+},
+finishDailyTask: function() {
+	if (this.dailyTasks.state) return;
+	this.debugLog("今日收集结束");
+	this.currentTask = null;
+	this.dailyTasks.state = 1;
+	if (this.getDailyTotalSilver()) {
+		var msg = new Notification("大丰收~", {
+			body: "今天的" + this.getDailyTotalSilver() + "瓜子已全部领完~",
+			icon: "//static.hdslb.com/live-static/images/7.png"
+		});
+		setTimeout(function() { msg.close() }, 1e4);
+	}
+	this.refreshTask() || this.save();
+},
+getTime: function() {
+	var d = new Date();
+	d.setTime(d.getTime() + d.getTimezoneOffset() * 6e4 + 288e5); // GMT+8
+	return d.format("HHmmss");
 },
 getDate: function() {
 	var d = new Date();
-	d.setTime(d.getTime() + d.getTimezoneOffset() * 6e4 + 144e5); // GMT+4
+	d.setTime(d.getTime() + d.getTimezoneOffset() * 6e4 + 144e5); // GMT+4, 瓜子刷新时间为每天4点
 	return d.format("YYMMDD");
 },
-getTotalSilver: function() {
-	var t = 0;
-	for (var i = 0; i < this.tasks.length; i++)
-		t += this.tasks[i].silver;
-	return t;
+getSignDate: function() {
+	var d = new Date();
+	d.setTime(d.getTime() + d.getTimezoneOffset() * 6e4 + 288e5); // GMT+8, 签到刷新时间为每天0点
+	return d.format("YYMMDD");
 },
 getDailyTotalSilver: function() {
-	var t = 0, d = this.getDate();
-	for (var i = 0; i < this.tasks.length; i++)
-		if (this.tasks[i].date == d)
-			t += this.tasks[i].silver;
+	var t = 0;
+	for (var i = 0; i < this.dailyTasks.tasks.length; i++)
+		t += this.dailyTasks.tasks[i].silver;
+	return t;
+},
+getTotalSilver: function() {
+	// TODO
+	var t = this.moreTotalSilver;
+	for (var i = 0; i < this.dailyTasks.tasks.length; i++)
+		t += this.dailyTasks.tasks[i].silver;
+	for (var i = 0; i < this.dailyHistory.length; i++)
+		t += this.dailyHistory[i].silver;
 	return t;
 },
 loadImage: function(img) {
@@ -110,13 +207,9 @@ doSign: function(callback) {
 },
 setListener: function() {
 	var _this = this;
-	var focusBox = function() {
-		$(".treasure-box").click();
-		$("#freeSilverCaptchaInput").focus();
-	};
 	console.log("BiliSilverCatcher ver " + this.version);
 	console.log("瓜子掉下去了!~接下来会上来金的还是银的呢~");
-	var retryCooldownFlag = 0;
+	var retryCooldownFlag = 0, taskFailedFlag = 0;
 	// 自动签到
 	var signCooldownFlag = 0;
 	var Listener = function() {
@@ -126,18 +219,11 @@ setListener: function() {
 			setTimeout(function() { signCooldownFlag = 0 }, 3e5); // 5min
 		}
 		// 跨日处理
-		if (_this.endDay)
-			if (_this.endDay == _this.getDate()) return;
-			else $(".treasure").show();
+		if (_this.dailyTasks.date != _this.getDate())
+			_this.startDailyTask();
 		if (!$(".treasure").length || $(".treasure").css("display") == "none") {
-			_this.currentTask = null;
-			_this.endDay = _this.getDate();
-			if (!_this.getDailyTotalSilver()) return;
-			var msg = new Notification("大丰收~", {
-				body: "今天的" + _this.getDailyTotalSilver() + "瓜子已全部领完~",
-				icon: "//static.hdslb.com/live-static/images/7.png"
-			});
-			setTimeout(function() { msg.close() }, 1e4);
+			taskFailedFlag = 0;
+			_this.finishDailyTask();
 			return;
 		}
 		// 验证码处理
@@ -149,25 +235,24 @@ setListener: function() {
 			setTimeout(function() { retryCooldownFlag = 0 }, 2e3);
 		} : null;
 		if (_this.currentTask) {
-			var success = $(".tip-primary").filter(function() { if ($(this).text() == "我知道了") return !0 });
-			if (success.length && $(".treasure-count-down").text() != "00:00") {
-				_this.debugLog((new Date()).format("[YYMMDD HH:mm:ss]") + " 成功领取" + _this.currentTask.silver + "瓜子");
-				var msg = new Notification(_this.currentTask.silver + "瓜子自动领取成功", {
-					body: "今日已领取" + _this.getDailyTotalSilver() + "瓜子",
-					icon: "//static.hdslb.com/live-static/images/7.png"
-				});
-				success.click();
-				_this.currentTask = null;
-				_this.saveDailyTasks();
-				setTimeout(function() { msg.close() }, 5e3);
+			var successBtn = $(".tip-primary").filter(function() { return $(this).text() == "我知道了" });
+			if (successBtn.length && $(".treasure-count-down").text() != "00:00") {
+				successBtn.click();
+				_this.finishTask();
 			} else {
 				if (_this.currentTask.retryTimes > 10) {
-					var msg = new Notification(_this.currentTask.silver + "瓜子自动领取失败", {
-						body: "点击手动领取",
-						icon: "//static.hdslb.com/live-static/images/1.png"
-					});
-					msg.onclick = focusBox;
-					setTimeout(function() { msg.close() }, 5e3);
+					if (!taskFailedFlag) {
+						taskFailedFlag = 1;
+						var msg = new Notification(_this.currentTask.silver + "瓜子自动领取失败", {
+							body: "点击手动领取",
+							icon: "//static.hdslb.com/live-static/images/1.png"
+						});
+						msg.onclick = function() {
+							$(".treasure-box").click();
+							$("#freeSilverCaptchaInput").focus();
+						};
+						setTimeout(function() { msg.close() }, 5e3);
+					}
 				} else {
 					if (retryCooldownFlag) return;
 					retryCooldownFlag = 1;
@@ -176,21 +261,10 @@ setListener: function() {
 				}
 			}
 		}
-		// 检测当前task
+		// 开始新task
 		if (!_this.currentTask && $(".treasure-count-down").text() == "00:00") {
-			_this.tasks.push(_this.currentTask = { date: _this.getDate(), silver: ~~$("#gz-num").text(), retryTimes: 0 });
-			var msg = new Notification(_this.currentTask.silver + "瓜子已就绪", {
-				body: "点击转到页面" + (_this.autoMode ? "（2秒后自动领取）" : ""),
-				icon: "//static.hdslb.com/live-static/images/1.png"
-			});
-			if (_this.autoMode) {
-				setTimeout(function() {
-					msg.close();
-					$(".treasure-box").click();
-				}, 2000);
-			}
-			msg.onclick = focusBox;
-		};
+			_this.startTask();
+		}
 	};
 	Listener.interval = setInterval(Listener, 1e3);
 	Listener.clear = function() { clearInterval(Listener.interval) };
@@ -198,5 +272,7 @@ setListener: function() {
 }
 };
 Notification.requestPermission();
+
+if (window._bsc && window._bsc.listener) window._bsc.listener.clear();
 var _bsc = window._bsc = new BiliSilverCatcher(true, typeof __commandLineAPI == "object");
 _bsc.setListener();
