@@ -231,7 +231,10 @@ setListener: function() {
 		if (img) img.onload = _this.autoMode ? function() {
 			_this.loadImage(img);
 			$("#freeSilverCaptchaInput").val(_this.getAnwser(_this.getQuestion()));
-			$("#getFreeSilverAward").click();
+			// 高级版 $("#getFreeSilverAward").click();
+			var o = document.createEvent("MouseEvent");
+			o.initEvent("click", !0, !0, window, 1, 0, 0, 0, 0, !1, !1, !1, !1, 0, null);
+			$("#getFreeSilverAward")[0].dispatchEvent(o);
 			setTimeout(function() { retryCooldownFlag = 0 }, 2e3);
 		} : null;
 		if (_this.currentTask) {
