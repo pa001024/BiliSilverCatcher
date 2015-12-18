@@ -31,7 +31,7 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 	this.signs = {}; // [date].1/0
 	this.load();
 	if (!window.OCRAD)
-		(function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://pa001024.github.io/BiliSilverCatcher/ocrad.js');
+		(function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://s.0w0.be/bsc/ocrad.js');
 	if (!window.basad) {
 		window.basad = 1;
 		$('<a target="bsc" href="/24544" title="喂作者瓜子" class="to-vip" style="margin-right: 25px;"><i class="guazi" style="background-position:-647px -100px;"></i><font>脚本已启用</font></a>').insertBefore($(".receive>:first"))
@@ -44,7 +44,7 @@ showStatus: function() {
 	console.log("累计总领取: " + this.getTotalSilver() + "瓜子");
 },
 debugLog: function(d) {
-	if (this.debug) console.log((new Date()).format("[YY-MM-DD HH:mm:ss]"), d);
+	if (this.debug) console.log((new Date()).toLocaleString(), d);
 },
 load: function() {
 	if (typeof localStorage == "undefined") return;
