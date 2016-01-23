@@ -1,10 +1,12 @@
-// BiliSilverCatcher ver 1.1.7
+// BiliSilverCatcher ver 1.1.8
 // TODO: 改进识别算法
 // TODO: 浏览器兼容性
 // features: 自动签到, 自动领瓜子(跨天,支持不同时区), localStorage记录当日瓜子和历史瓜子
+// update: 支持新版UI(2016/1/21)
 
 var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
-	this.version = "1.1.7";
+	this.preload();
+	this.version = "1.1.8";
 	var canvas = document.getElementById('bcsCanvas');
 	if (!canvas) {
 		canvas = document.createElement('canvas');
@@ -16,7 +18,6 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 		canvas.style.position = "absolute";
 		document.body.appendChild(canvas);
 	}
-	// 加载字形库
 	var context = canvas.getContext('2d');
 	context.font = '40px agencyfbbold'; // 字体
 	context.textBaseline = 'top';
@@ -34,10 +35,37 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 		(function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://s.0w0.be/bsc/ocrad.js');
 	if (!window.basad) {
 		window.basad = 1;
-		$('<a target="bsc" href="/24544" title="喂作者瓜子" class="to-vip" style="margin-right: 25px;"><i class="guazi" style="background-position:-647px -100px;"></i><font>脚本已启用</font></a>').insertBefore($(".receive>:first"))
+		$('<div class="ctrl-item gold-seeds"><i class="live-icon-small new-hinter" style="vertical-align: middle;"></i><a target="bsc" href="/24544" title="喂作者瓜子" class="link bili-link">脚本已启用</a></div>').insertBefore($(".control-panel>:first"))
 	}
 };
 BiliSilverCatcher.prototype = {
+preload: function() {
+	// Date.format prototype
+	Date.prototype.format = function(pattern) {
+		var returnValue = pattern;
+		var format = {
+			"y+": this.getFullYear(),
+			"M+": this.getMonth()+1,
+			"d+": this.getDate(),
+			"H+": this.getHours(),
+			"m+": this.getMinutes(),
+			"s+": this.getSeconds(),
+			"S": this.getMilliseconds(),
+			"h+": (this.getHours()%12),
+			"a": (this.getHours()/12) <= 1? "AM":"PM"
+		};
+		for(var key in format) {
+			var regExp = new RegExp("("+key+")");
+			if(regExp.test(returnValue)) {
+				var zero = "";
+				for(var i = 0; i < RegExp.$1.length; i++) { zero += "0"; }
+				var replacement = RegExp.$1.length == 1? format[key]:(zero+format[key]).substring(((""+format[key]).length));
+				returnValue = returnValue.replace(RegExp.$1, replacement);
+			}
+		}
+		return returnValue;
+	};
+},
 showStatus: function() {
 	console.log("==== BiliSilverCatcher Status ====");
 	console.log("今日已领取: " + this.getDailyTotalSilver() + "瓜子");
