@@ -1,4 +1,4 @@
-// BiliSilverCatcher ver 1.1.8
+// BiliSilverCatcher ver 1.1.9
 // TODO: 改进识别算法
 // TODO: 浏览器兼容性
 // features: 自动签到, 自动领瓜子(跨天,支持不同时区), localStorage记录当日瓜子和历史瓜子
@@ -6,7 +6,7 @@
 
 var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 	this.preload();
-	this.version = "1.1.8";
+	this.version = "1.1.9";
 	var canvas = document.getElementById('bcsCanvas');
 	if (!canvas) {
 		canvas = document.createElement('canvas');
@@ -266,7 +266,7 @@ setListener: function() {
 			setTimeout(function() { retryCooldownFlag = 0 }, 2e3);
 		} : null;
 		if (_this.currentTask) {
-			var successBtn = $(".tip-primary").filter(function() { return $(this).text() == "我知道了" });
+			var successBtn = $(".acknowledge-btn").filter(function() { return $(this).text() == "我知道了" });
 			if (successBtn.length && $(".treasure-count-down").text() != "00:00") {
 				successBtn.click();
 				_this.finishTask();
