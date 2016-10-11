@@ -1,12 +1,13 @@
-// BiliSilverCatcher ver 1.1.9
+// BiliSilverCatcher ver 1.1.10
 // TODO: 改进识别算法
 // TODO: 浏览器兼容性
 // features: 自动签到, 自动领瓜子(跨天,支持不同时区), localStorage记录当日瓜子和历史瓜子
 // update: 支持新版UI(2016/1/21)
+// update: 支持新版UI(2016/8/1)
 
 var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 	this.preload();
-	this.version = "1.1.9";
+	this.version = "1.1.10";
 	var canvas = document.getElementById('bcsCanvas');
 	if (!canvas) {
 		canvas = document.createElement('canvas');
@@ -32,7 +33,7 @@ var /*<class>*/ BiliSilverCatcher = function(autoMode, debug) {
 	this.signs = {}; // [date].1/0
 	this.load();
 	if (!window.OCRAD)
-		(function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://s.0w0.be/bsc/ocrad.js');
+		(function(a,d){d=document.createElement('script');d.src=a;document.body.appendChild(d)})('http://7xpat8.com1.z0.glb.clouddn.com/bsc/ocrad.js');//('http://s.0w0.be/bsc/ocrad.js');
 	if (!window.basad) {
 		window.basad = 1;
 		$('<div class="ctrl-item gold-seeds"><i class="live-icon-small new-hinter" style="vertical-align: middle;"></i><a target="bsc" href="/24544" title="喂作者瓜子" class="link bili-link">脚本已启用</a></div>').insertBefore($(".control-panel>:first"))
@@ -115,7 +116,7 @@ refreshTask: function() {
 	return false;
 },
 startTask: function() {
-	this.dailyTasks.tasks.push(this.currentTask = { time: this.getTime(), silver: ~~$("#gz-num").text(), retryTimes: 0 });
+	this.dailyTasks.tasks.push(this.currentTask = { time: this.getTime(), silver: ~~$(".waiting-panel span:last").text(), retryTimes: 0 });
 	var msg = new Notification(this.currentTask.silver + "瓜子已就绪", {
 		body: "点击转到页面" + (this.autoMode ? "（2秒后自动领取）" : ""),
 		icon: "//static.hdslb.com/live-static/images/1.png"
@@ -128,7 +129,7 @@ startTask: function() {
 	}
 	msg.onclick = function() {
 		$(".treasure-box").click();
-		$("#freeSilverCaptchaInput").focus();
+		$(".acquiring-panel .live-input").focus();
 	};
 },
 finishTask: function() {
@@ -143,7 +144,7 @@ finishTask: function() {
 },
 startDailyTask: function() {
 	this.debugLog("开始新一轮瓜子收集");
-	$(".treasure").show(); // TODO: 处理不存在.treasure的情况
+	$(".treasure-box-ctnr").show(); // TODO: 处理不存在.treasure的情况
 	if (!this.getDailyTotalSilver()) return;
 	var msg = new Notification("新的一天开始了", {
 		body: "今天的瓜子也一定会大丰收的~",
@@ -174,12 +175,12 @@ getTime: function() {
 getDate: function() {
 	var d = new Date();
 	d.setTime(d.getTime() + d.getTimezoneOffset() * 6e4 + 144e5); // GMT+4, 瓜子刷新时间为每天4点
-	return d.format("YYMMDD");
+	return d.format("yyMMdd");
 },
 getSignDate: function() {
 	var d = new Date();
 	d.setTime(d.getTime() + d.getTimezoneOffset() * 6e4 + 288e5); // GMT+8, 签到刷新时间为每天0点
-	return d.format("YYMMDD");
+	return d.format("yyMMdd");
 },
 getDailyTotalSilver: function() {
 	var t = 0;
@@ -249,25 +250,25 @@ setListener: function() {
 		// 跨日处理
 		if (_this.dailyTasks.date != _this.getDate())
 			_this.startDailyTask();
-		if (!$(".treasure").length || $(".treasure").css("display") == "none") {
+		if (!$(".treasure-box-ctnr").length || $(".treasure-box-ctnr").css("display") == "none") {
 			taskFailedFlag = 0;
 			_this.finishDailyTask();
 			return;
 		}
 		// 验证码处理
-		var img = document.getElementById('captchaImg');
+		var img = $(".captcha-img")[0];
 		if (img) img.onload = _this.autoMode ? function() {
 			_this.loadImage(img);
-			$("#freeSilverCaptchaInput").val(_this.getAnwser(_this.getQuestion()));
-			// 高级版 $("#getFreeSilverAward").click();
+			$(".acquiring-panel .live-input").val(_this.getAnwser(_this.getQuestion()));
+			// 高级版 $(".get-award-btn").click();
 			var o = document.createEvent("MouseEvent");
 			o.initEvent("click", !0, !0, window, 1, 0, 0, 0, 0, !1, !1, !1, !1, 0, null);
-			$("#getFreeSilverAward")[0].dispatchEvent(o);
+			$(".get-award-btn")[0].dispatchEvent(o);
 			setTimeout(function() { retryCooldownFlag = 0 }, 2e3);
 		} : null;
 		if (_this.currentTask) {
 			var successBtn = $(".acknowledge-btn").filter(function() { return $(this).text() == "我知道了" });
-			if (successBtn.length && $(".treasure-count-down").text() != "00:00") {
+			if (successBtn.length && $("div.count-down").text() != "00:00") {
 				successBtn.click();
 				_this.finishTask();
 			} else {
@@ -280,7 +281,7 @@ setListener: function() {
 						});
 						msg.onclick = function() {
 							$(".treasure-box").click();
-							$("#freeSilverCaptchaInput").focus();
+							$(".acquiring-panel .live-input").focus();
 						};
 						setTimeout(function() { msg.close() }, 5e3);
 					}
@@ -293,7 +294,7 @@ setListener: function() {
 			}
 		}
 		// 开始新task
-		if (!_this.currentTask && $(".treasure-count-down").text() == "00:00") {
+		if (!_this.currentTask && $("div.count-down").text() == "00:00") {
 			_this.startTask();
 		}
 	};
@@ -305,5 +306,5 @@ setListener: function() {
 Notification.requestPermission();
 
 if (window._bsc && window._bsc.listener) window._bsc.listener.clear();
-var _bsc = window._bsc = new BiliSilverCatcher(true, typeof __commandLineAPI == "object");
+var _bsc = window._bsc = new BiliSilverCatcher(!window._bscManual, typeof __commandLineAPI == "object");
 _bsc.setListener();
